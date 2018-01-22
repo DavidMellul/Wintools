@@ -8,6 +8,7 @@ void showFullHelp(char** argv);
 void setup();
 void uninstall();
 void copyToClipBoard(const char* content);
+void pasteClipboardToFile(const char* filepath);
 
 int main(int argc, char** argv)
 {
@@ -39,7 +40,7 @@ int main(int argc, char** argv)
     // Two arguments, first is either <copy content to clipboard> or <copy absolute path to clipboard> or <open shell here>
     // second is <file path>
     if(argc == 3) {
-        if(strcmp(argv[1], "/c") == 0) {
+        if(strcmp(argv[1], "/c") == 0) { // Copy content to clipboard
             // Open file in read mode & Find its size & Read its content & Store it to clipboard
             FILE* file = fopen(argv[2], "r");
 
@@ -54,17 +55,18 @@ int main(int argc, char** argv)
             fclose(file);
             copyToClipBoard(content);
             free(content);
-        } else if(strcmp(argv[1], "/p") == 0) {
+        } else if(strcmp(argv[1], "/p") == 0) { // Copy absolute path to clipboard
             // Retrieve file path from command-line & Store it to clipboard
             const char* filePath = argv[2];
             copyToClipBoard(filePath);
-        }  else if(strcmp(argv[1], "/d") == 0) {
+        }  else if(strcmp(argv[1], "/d") == 0) { // Open shell here
             // Start a shell with the supplied path as working directory
             char* commandBuffer = malloc(strlen(argv[2])+15);
             sprintf(commandBuffer, "cmd /k \"cd /d %s\"",argv[2]);
             system(commandBuffer);
-        }
-        else
+        } else if(strcmp(argv[1], "/v") == 0) { // Paste clipboard in file
+			pasteClipboardToFile(argv[2]);
+		} else
             showShortHelp(argv);
     }
 
@@ -85,6 +87,7 @@ void showFullHelp(char** argv)
 	printf("\nOptions:\n");
 	printf("\t/u - Unintall Wintools from the contextual menu\n");
 	printf("\t/c <filePath> - Copy content of the file at <filepath> to the clipboard\n");
+	printf("\t/v <filePath> - Paste what's inside the clipboard to the file at <filePath>\n");
 	printf("\t/p <filePath|directoryPath> - Copy the absolute path of what is located at either <filePath> or <directoryPath>\n");
 	printf("\t/d <directoryPath> - Open a shell with the working directory pointing to <directoryPath>");
 	printf("\nImportant:\n");
@@ -95,13 +98,13 @@ void showFullHelp(char** argv)
 void setup()
 {
     HKEY hKeyCurrentUser, hKeyLocalMachine, hKeyTemp;
-    char* currentDir;
-    currentDir = _getcwd(NULL, 0);
-    char* currentFile = malloc(strlen(currentDir) + strlen("\\Wintools"));
-    strcpy(currentFile, currentDir);
-    strcat(currentFile, "\\Wintools");
-    char *tmpCommand = "%s %s", *copyPathCommand = "/p %1", *copyContentCommand = "/c %1", *openShellCommand = "/d %1";
-    char* builtCommand;
+	
+    char* currentDir =  _getcwd(NULL, 0);
+	char* currentFile = malloc(strlen(currentDir) + strlen("\\Wintools")); strcpy(currentFile, currentDir); strcat(currentFile, "\\Wintools");
+	
+    char *tmpCommand = "%s %s", *copyPathCommand = "/p %1", *copyContentCommand = "/c %1", *openShellCommand = "/d %1", *pasteClipboardCommand = "/v %1";
+    char* availableFileCommands = "copyPath;copyContent;pasteClipboard", *availableDirCommands = "copyPath;openShell";
+	char* builtCommand;
 
     // Create a menu for the files
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\*\\shell\\Wintools", NULL, NULL,
@@ -109,7 +112,7 @@ void setup()
 
     // Create a value for the Wintools cascading menu name + sub commands
     RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools")*sizeof(char));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)"copyPath;copyContent;openShell", strlen("copyPath;copyContent")*sizeof(char));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableFileCommands, strlen(availableFileCommands)*sizeof(char));
 
 
 
@@ -117,7 +120,7 @@ void setup()
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\directory\\shell\\Wintools", NULL, NULL,
                    REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
     RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools")*sizeof(char));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)"copyPath;openShell", strlen("copyPath;openShell")*sizeof(char));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableDirCommands , strlen(availableFileCommands)*sizeof(char));
 	
     // Release the key
     RegCloseKey(hKeyCurrentUser);
@@ -156,6 +159,16 @@ void setup()
     sprintf(builtCommand, tmpCommand, currentFile, openShellCommand );
     RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
     free(builtCommand);
+	
+	// Paste clipboard in file
+	RegCreateKeyEx(hKeyLocalMachine, "pasteClipboard", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Paste clipboard here", strlen("Paste clipboard here")*sizeof(char));
+    RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
+
+    builtCommand = malloc(strlen(currentFile) + strlen(pasteClipboardCommand) + 1);
+    sprintf(builtCommand, tmpCommand, currentFile, pasteClipboardCommand );
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
+    free(builtCommand);
 
     RegCloseKey(hKeyTemp);
     RegCloseKey(hKeyLocalMachine);
@@ -186,3 +199,16 @@ void copyToClipBoard(const char* content)
     CloseClipboard();
 }
 
+void pasteClipboardToFile(const char* filepath) {
+	HANDLE h;
+	
+	// Open & Retrieve & Close clipboard
+	OpenClipboard(0);
+	h = GetClipboardData(CF_TEXT);
+	CloseClipboard();
+	
+	// Write to file
+	FILE *file = fopen(filepath, "w");
+	fputs((char*)h, file);
+	fclose(file);
+}
