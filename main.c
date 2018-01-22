@@ -3,12 +3,34 @@
 #include <string.h>
 #include <windows.h>
 
+#define NAME "Wintools"
+#define FILE_ACTIONS_LEN 3
+#define DIR_ACTIONS_LEN 2
+#define ALL_ACTIONS_LEN 4
+
 void showShortHelp(char** argv);
 void showFullHelp(char** argv);
 void setup();
 void uninstall();
 void copyToClipBoard(const char* content);
 void pasteClipboardToFile(const char* filepath);
+	
+typedef struct  {
+	char* displayName;
+	char* registryName;
+	char* commandLineOption;
+} MenuAction;
+
+typedef MenuAction MenuActions[];
+
+// List of actions supported in the context menu
+MenuActions allActions = {
+	{ "Copy path","copyPath","/p %1" },
+	{ "Copy content","copyContent","/c %1"},
+	{ "Paste content","pasteContent","/v %1" },
+	{ "Open shell here","openShell","/d %1" }
+};
+
 
 int main(int argc, char** argv)
 {
@@ -97,81 +119,70 @@ void showFullHelp(char** argv)
 
 void setup()
 {
+	// Registry key handlers
     HKEY hKeyCurrentUser, hKeyLocalMachine, hKeyTemp;
 	
+	// Retrieve absolute file path of this program
     char* currentDir =  _getcwd(NULL, 0);
 	char* currentFile = malloc(strlen(currentDir) + strlen("\\Wintools")); strcpy(currentFile, currentDir); strcat(currentFile, "\\Wintools");
 	
-    char *tmpCommand = "%s %s", *copyPathCommand = "/p %1", *copyContentCommand = "/c %1", *openShellCommand = "/d %1", *pasteClipboardCommand = "/v %1";
-    char* availableFileCommands = "copyPath;copyContent;pasteClipboard", *availableDirCommands = "copyPath;openShell";
+	
+	// List of actions only available on right-clicking a file
+	MenuActions fileActions = {allActions[0], allActions[1], allActions[2]};
+	
+	char* fileActionsAsRegistryString = malloc(0);
+	for(int i = 0; i < FILE_ACTIONS_LEN; i++) {
+		fileActionsAsRegistryString = realloc(fileActionsAsRegistryString, 1+sizeof(fileActions[i].registryName));
+		strcat(fileActionsAsRegistryString,fileActions[i].registryName);
+		strcat(fileActionsAsRegistryString,";");
+	}
+	
+	// List of actions only avaiable on right-clicking a directory
+	MenuActions dirActions = {allActions[0], allActions[3]};
+	char* dirActionsAsRegistryString = malloc(0);
+	for(int i = 0; i <  DIR_ACTIONS_LEN; i++) {
+		dirActionsAsRegistryString = realloc(dirActionsAsRegistryString, 1+sizeof(dirActions[i].registryName));
+		strcat(dirActionsAsRegistryString,dirActions[i].registryName);
+		strcat(dirActionsAsRegistryString,";");
+	}
+
+	// First interpolated string is the absolute path of Wintools. Second one is the parameters used to start a command (e.g. /p %1)
+    char *commandTemplate = "%s %s";
+	
+	// String used multiple times to hold the result of sprintf used with commandTemplate for each command
 	char* builtCommand;
+	
+    // Open the current user key to create the cascading menu
+    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\*\\shell\\Wintools",NULL, NULL,REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
+    
+	// Create a menu for the files
+	RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)NAME, strlen(NAME));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)fileActionsAsRegistryString, strlen(fileActionsAsRegistryString));
 
-    // Create a menu for the files
-    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\*\\shell\\Wintools", NULL, NULL,
-                   REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
-
-    // Create a value for the Wintools cascading menu name + sub commands
-    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools"));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableFileCommands, strlen(availableFileCommands));
-
-
-
-    // Same for folders, without the copyContent function, with openShell function
-    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\directory\\shell\\Wintools", NULL, NULL,
-                   REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
-    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools"));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableDirCommands , strlen(availableDirCommands));
+    // Create a menu for the folders
+    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\directory\\shell\\Wintools",NULL, NULL,REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
+    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)NAME, strlen(NAME));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)dirActionsAsRegistryString , strlen(dirActionsAsRegistryString));
 	
     // Release the key
     RegCloseKey(hKeyCurrentUser);
 
-    // Register shortcuts to each cascading menu action
+    // Open the local machine key to register each action to a command-line call
     RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell", 0, KEY_QUERY_VALUE, &hKeyLocalMachine);
 
-    // Actions
+    for(int i = 0; i < ALL_ACTIONS_LEN; i++) {
+		RegCreateKeyEx(hKeyLocalMachine, allActions[i].registryName, NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
+		RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)allActions[i].displayName, strlen(allActions[i].displayName));
+		RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
-    // Copy path
-    RegCreateKeyEx(hKeyLocalMachine, "copyPath", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy path", strlen("Copy path"));
-    RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-
-    builtCommand = malloc(strlen(currentFile) + strlen(copyPathCommand) + 1);
-    sprintf(builtCommand, tmpCommand, currentFile, copyPathCommand);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
-    free(builtCommand);
-
-    // Copy content
-    RegCreateKeyEx(hKeyLocalMachine, "copyContent", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy content", strlen("Copy content"));
-    RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-
-    builtCommand = malloc(strlen(currentFile) + strlen(copyContentCommand) + 1);
-    sprintf(builtCommand, tmpCommand, currentFile, copyContentCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
-    free(builtCommand);
-
-    // Open shell
-    RegCreateKeyEx(hKeyLocalMachine, "openShell", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Open shell here", strlen("Open shell here"));
-    RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-
-    builtCommand = malloc(strlen(currentFile) + strlen(openShellCommand) + 1);
-    sprintf(builtCommand, tmpCommand, currentFile, openShellCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
-    free(builtCommand);
-	
-	// Paste clipboard in file
-	RegCreateKeyEx(hKeyLocalMachine, "pasteClipboard", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Paste clipboard here", strlen("Paste clipboard here"));
-    RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-
-    builtCommand = malloc(strlen(currentFile) + strlen(pasteClipboardCommand) + 1);
-    sprintf(builtCommand, tmpCommand, currentFile, pasteClipboardCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
-    free(builtCommand);
+		builtCommand = malloc(strlen(currentFile) + strlen(allActions[i].commandLineOption) + 1);
+		sprintf(builtCommand, commandTemplate, currentFile, allActions[i].commandLineOption);
+		RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
+		free(builtCommand);
+	}
 
     RegCloseKey(hKeyTemp);
-    RegCloseKey(hKeyLocalMachine);
+    RegCloseKey(hKeyLocalMachine); 
 }
 
 void uninstall()
