@@ -47,8 +47,8 @@ int main(int argc, char** argv)
             fseek(file, 0, SEEK_END);
             long fileSize = ftell(file);
 
-            fseek(file, 0, SEEK_SET);
-            char* content = malloc(fileSize + 1); // +1 in order to null-terminate the string
+            rewind(file);
+            char* content = calloc(1, fileSize + 1); // +1 in order to null-terminate the string
             fread(content, fileSize, 1, file);
             content[fileSize] = '\0';
 
@@ -111,16 +111,16 @@ void setup()
                    REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
 
     // Create a value for the Wintools cascading menu name + sub commands
-    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools")*sizeof(char));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableFileCommands, strlen(availableFileCommands)*sizeof(char));
+    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools"));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableFileCommands, strlen(availableFileCommands));
 
 
 
     // Same for folders, without the copyContent function, with openShell function
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\Classes\\directory\\shell\\Wintools", NULL, NULL,
                    REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyCurrentUser, NULL);
-    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools")*sizeof(char));
-    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableDirCommands , strlen(availableFileCommands)*sizeof(char));
+    RegSetValueEx(hKeyCurrentUser, TEXT("MUIVerb"), 0, REG_SZ, (LPBYTE)"Wintools", strlen("Wintools"));
+    RegSetValueEx(hKeyCurrentUser, TEXT("SubCommands"), 0, REG_SZ, (LPBYTE)availableDirCommands , strlen(availableDirCommands));
 	
     // Release the key
     RegCloseKey(hKeyCurrentUser);
@@ -132,42 +132,42 @@ void setup()
 
     // Copy path
     RegCreateKeyEx(hKeyLocalMachine, "copyPath", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy path", strlen("Copy path")*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy path", strlen("Copy path"));
     RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
     builtCommand = malloc(strlen(currentFile) + strlen(copyPathCommand) + 1);
     sprintf(builtCommand, tmpCommand, currentFile, copyPathCommand);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
     free(builtCommand);
 
     // Copy content
     RegCreateKeyEx(hKeyLocalMachine, "copyContent", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy content", strlen("Copy content")*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Copy content", strlen("Copy content"));
     RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
     builtCommand = malloc(strlen(currentFile) + strlen(copyContentCommand) + 1);
     sprintf(builtCommand, tmpCommand, currentFile, copyContentCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
     free(builtCommand);
 
     // Open shell
     RegCreateKeyEx(hKeyLocalMachine, "openShell", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Open shell here", strlen("Open shell here")*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Open shell here", strlen("Open shell here"));
     RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
     builtCommand = malloc(strlen(currentFile) + strlen(openShellCommand) + 1);
     sprintf(builtCommand, tmpCommand, currentFile, openShellCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
     free(builtCommand);
 	
 	// Paste clipboard in file
 	RegCreateKeyEx(hKeyLocalMachine, "pasteClipboard", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Paste clipboard here", strlen("Paste clipboard here")*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)"Paste clipboard here", strlen("Paste clipboard here"));
     RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
     builtCommand = malloc(strlen(currentFile) + strlen(pasteClipboardCommand) + 1);
     sprintf(builtCommand, tmpCommand, currentFile, pasteClipboardCommand );
-    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand)*sizeof(char));
+    RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
     free(builtCommand);
 
     RegCloseKey(hKeyTemp);
@@ -181,11 +181,12 @@ void uninstall()
 	RegDeleteKey(HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\copyPath");
 	RegDeleteKey(HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\copyContent");
 	RegDeleteKey(HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\openShell");
+	RegDeleteKey(HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell\\pasteClipboard");
 }
 
 void copyToClipBoard(const char* content)
 {
-    const size_t contentLength = strlen(content) + 1;
+    const size_t contentLength = (strlen(content)+1)*sizeof(char);
 
     // Lock and allocate memory to store the content & Unlock at the end
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, contentLength);
