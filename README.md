@@ -1,24 +1,30 @@
 
 # Wintools
-Wintools allows to enhance the Windows contextual menu (right-click) with some cool functionalities
+Wintools allows to enhance Windows contextual menu (right-click) with some cool functionalities
 
-## Download
+<img src="examples/showcase.gif" />
+
+## How to install
 
 I built a ready-to-use executable that should work on Windows 2000 and above, which you'll find here :  
-<a href="http://www.mediafire.com/file/odnur3cnu2aygok/Wintools.exe">Mediafire link to download Wintools.exe</a>
+
+<a href="http://www.mediafire.com/file/odnur3cnu2aygok/Wintools.exe">Mediafire link to download Wintools.exe</a> 
+
+Run as administrator, do not move the file from where you launched it, and you're good to go :)
 
 ## What does it look like 
 
-<img src="example_1.png" /><br />
-<img src="example_2.png" />
+<img src="examples/example_1.png" /><br />
+<img src="examples/example_2.png" />
 
 ## Functionalities
 
 **Wintools** will add a contextual cascading menu in two cases:
-- Right click on a **file** : 
+- **Right click on a file** : 
 	- You can copy to your clipboard what's inside this file.
 	- You can copy to your clipboard the absolute path of this file.
-- Right click on a **directory**:
+	- You can paste the content of your clipboard inside this file.
+- **Right click on a directory**:
 	- You can copy to your clipboard the absolute path of this directory.
 	- You can open a shell with this directory as current working directory.
 
