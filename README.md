@@ -38,7 +38,7 @@ This will delete the custom registry keys created by Wintools.
 - You should be able to build it easily if you're not confident with my own distribution. **It's a single C file with no dependencies.**
 
 - There might be caveats with very large files (> 4GB)
-- There might be caveats with particular file formats such as **.docx & .pdf** ones as **Wintools works in a string mode** when it comes to copy file content to clipboard.
+- There might be caveats with particular file formats such as **.docx & .pdf** ones as **Wintools works in string mode** when it comes to copy file content to clipboard.
 
 ## Contribute
 
