@@ -5,7 +5,7 @@ Wintools allows to enhance the Windows contextual menu (right-click) with some c
 ## Download
 
 I built a ready-to-use executable that should work on Windows 2000 and above, which you'll find here :  
-<a href="http://dmware.fr/wintools/wintools.exe">Link to download Wintools.exe</a>
+<a href="http://www.mediafire.com/file/odnur3cnu2aygok/Wintools.exe">Mediafire link to download Wintools.exe</a>
 
 ## What does it look like 
 
