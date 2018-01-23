@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #define NAME "Wintools"
+#define PATH "\\Wintools"
 #define FILE_ACTIONS_LEN 3
 #define DIR_ACTIONS_LEN 2
 #define ALL_ACTIONS_LEN 4
@@ -119,33 +120,37 @@ void showFullHelp(char** argv)
 
 void setup()
 {
+
 	// Registry key handlers
     HKEY hKeyCurrentUser, hKeyLocalMachine, hKeyTemp;
 	
 	// Retrieve absolute file path of this program
     char* currentDir =  _getcwd(NULL, 0);
-	char* currentFile = malloc(strlen(currentDir) + strlen("\\Wintools")); strcpy(currentFile, currentDir); strcat(currentFile, "\\Wintools");
 	
+	char* currentFile = malloc(strlen(currentDir) + strlen(PATH)+1); strcpy(currentFile, currentDir); strcat(currentFile, PATH); strcat(currentFile,"\0");
 	
+
 	// List of actions only available on right-clicking a file
 	MenuActions fileActions = {allActions[0], allActions[1], allActions[2]};
-	
-	char* fileActionsAsRegistryString = malloc(0);
+	char* fileActionsAsRegistryString = calloc(1,1);
 	for(int i = 0; i < FILE_ACTIONS_LEN; i++) {
-		fileActionsAsRegistryString = realloc(fileActionsAsRegistryString, 1+sizeof(fileActions[i].registryName));
-		strcat(fileActionsAsRegistryString,fileActions[i].registryName);
-		strcat(fileActionsAsRegistryString,";");
-	}
-	
-	// List of actions only avaiable on right-clicking a directory
-	MenuActions dirActions = {allActions[0], allActions[3]};
-	char* dirActionsAsRegistryString = malloc(0);
-	for(int i = 0; i <  DIR_ACTIONS_LEN; i++) {
-		dirActionsAsRegistryString = realloc(dirActionsAsRegistryString, 1+sizeof(dirActions[i].registryName));
-		strcat(dirActionsAsRegistryString,dirActions[i].registryName);
-		strcat(dirActionsAsRegistryString,";");
+		char* tmp = realloc(fileActionsAsRegistryString, sizeof(fileActionsAsRegistryString) + 1 + sizeof(fileActions[i].registryName)); // Clean realloc
+		strcat(tmp,fileActions[i].registryName);
+		strcat(tmp,";");
+		fileActionsAsRegistryString = tmp;
 	}
 
+	// List of actions only avaiable on right-clicking a directory
+	MenuActions dirActions = {allActions[0], allActions[3]};
+	char* dirActionsAsRegistryString = calloc(1,1);
+	for(int i = 0; i <  DIR_ACTIONS_LEN; i++) {
+		char* tmp = realloc(dirActionsAsRegistryString, sizeof(dirActionsAsRegistryString) + 1 + sizeof(dirActions[i].registryName));
+		dirActionsAsRegistryString = 
+		strcat(dirActionsAsRegistryString,dirActions[i].registryName);
+		strcat(dirActionsAsRegistryString,";");
+		dirActionsAsRegistryString = tmp;
+	}
+	
 	// First interpolated string is the absolute path of Wintools. Second one is the parameters used to start a command (e.g. /p %1)
     char *commandTemplate = "%s %s";
 	
@@ -175,12 +180,12 @@ void setup()
 		RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)allActions[i].displayName, strlen(allActions[i].displayName));
 		RegCreateKeyEx(hKeyTemp, "command", NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKeyTemp, NULL);
 
-		builtCommand = malloc(strlen(currentFile) + strlen(allActions[i].commandLineOption) + 1);
+		builtCommand = calloc(1,strlen(currentFile) + strlen(allActions[i].commandLineOption) + 1);
 		sprintf(builtCommand, commandTemplate, currentFile, allActions[i].commandLineOption);
 		RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
 		free(builtCommand);
 	}
-
+	
     RegCloseKey(hKeyTemp);
     RegCloseKey(hKeyLocalMachine); 
 }
