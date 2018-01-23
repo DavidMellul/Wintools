@@ -171,6 +171,9 @@ void setup()
 	
     // Release the key
     RegCloseKey(hKeyCurrentUser);
+	
+	// Free the variables
+	free(fileActionsAsRegistryString); free(dirActionsAsRegistryString);
 
     // Open the local machine key to register each action to a command-line call
     RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CommandStore\\shell", 0, KEY_QUERY_VALUE, &hKeyLocalMachine);
@@ -183,9 +186,11 @@ void setup()
 		builtCommand = calloc(1,strlen(currentFile) + strlen(allActions[i].commandLineOption) + 1);
 		sprintf(builtCommand, commandTemplate, currentFile, allActions[i].commandLineOption);
 		RegSetValueEx(hKeyTemp, TEXT(""), 0, REG_SZ, (LPBYTE)builtCommand, strlen(builtCommand));
-		free(builtCommand);
 	}
-	
+	free(builtCommand);
+	free(currentFile);
+
+	// Close keys
     RegCloseKey(hKeyTemp);
     RegCloseKey(hKeyLocalMachine); 
 }
