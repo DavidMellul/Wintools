@@ -6,11 +6,10 @@
 #define NAME "Wintools"
 #define PATH "\\Wintools"
 #define FILE_ACTIONS_LEN 3
-#define DIR_ACTIONS_LEN 2
-#define ALL_ACTIONS_LEN 4
+#define DIR_ACTIONS_LEN 3
+#define ALL_ACTIONS_LEN 5
 
 void showShortHelp(char** argv);
-void showFullHelp(char** argv);
 void setup();
 void uninstall();
 void copyToClipBoard(const char* content);
@@ -29,7 +28,8 @@ MenuActions allActions = {
 	{ "Copy path","copyPath","/p %1" },
 	{ "Copy content","copyContent","/c %1"},
 	{ "Paste content","pasteContent","/v %1" },
-	{ "Open shell here","openShell","/d %1" }
+	{ "Open shell here","openShell","/d %1" },
+	{ "Git pull" ,"gitPull", "/g pull %1" }
 };
 
 
@@ -50,13 +50,10 @@ int main(int argc, char** argv)
 
     // One argument, either <help> or <setup> or <uninstall>
     if(argc == 2) {
-        if(strcmp(argv[1], "/h") == 0)
-            showFullHelp(argv);
-        else if(strcmp(argv[1], "/u") == 0)
+        if(strcmp(argv[1], "/u") == 0)
             uninstall();
         else
             showShortHelp(argv);
-		
 		return 0;
     }
 
@@ -89,7 +86,12 @@ int main(int argc, char** argv)
             system(commandBuffer);
         } else if(strcmp(argv[1], "/v") == 0) { // Paste clipboard in file
 			pasteClipboardToFile(argv[2]);
-		} else
+		} else if(strcmp(argv[1], "/g") == 0) {
+				char* pullCommand = "git pull";
+				char* commandBuffer = malloc(strlen(argv[3]) + strlen(pullCommand) + 7);
+				sprintf(commandBuffer, "cd %s && %s", argv[3],pullCommand);
+		}
+		else
             showShortHelp(argv);
     }
 
@@ -99,23 +101,7 @@ int main(int argc, char** argv)
 void showShortHelp(char** argv)
 {
     printf("\nPlease use this tool with the Windows contextual menu only.\n");
-    printf("\nCurious ? You can grab some help with : %s /h.\n", argv[0]);
-}
-
-void showFullHelp(char** argv)
-{
-	printf("Wintools - Make your contextual menu better\n");
-	printf("\nUsage : %s | %s [/option] [path]\n", argv[0], argv[0]);
-	printf("\nIf no options are provided, Wintools will install its functionalities into the contextual menu\n");
-	printf("\nOptions:\n");
-	printf("\t/u - Unintall Wintools from the contextual menu\n");
-	printf("\t/c <filePath> - Copy content of the file at <filepath> to the clipboard\n");
-	printf("\t/v <filePath> - Paste what's inside the clipboard to the file at <filePath>\n");
-	printf("\t/p <filePath|directoryPath> - Copy the absolute path of what is located at either <filePath> or <directoryPath>\n");
-	printf("\t/d <directoryPath> - Open a shell with the working directory pointing to <directoryPath>");
-	printf("\nImportant:\n");
-	printf("\tIT IS CRUCIAL TO RUN WINTOOLS AS ADMINISTRATOR WHEN YOU WANT TO INSTALL/UNINSTALL IT.\n");
-	printf("\tThat's because it modifies registry keys !\n");
+	printf("\nInstall / Uninstall using administrator privileges only.\n");
 }
 
 void setup()
@@ -141,13 +127,12 @@ void setup()
 	}
 
 	// List of actions only avaiable on right-clicking a directory
-	MenuActions dirActions = {allActions[0], allActions[3]};
+	MenuActions dirActions = {allActions[0], allActions[3], allActions[4], allActions[5]};
 	char* dirActionsAsRegistryString = calloc(1,1);
 	for(int i = 0; i <  DIR_ACTIONS_LEN; i++) {
 		char* tmp = realloc(dirActionsAsRegistryString, sizeof(dirActionsAsRegistryString) + 1 + sizeof(dirActions[i].registryName));
-		dirActionsAsRegistryString = 
-		strcat(dirActionsAsRegistryString,dirActions[i].registryName);
-		strcat(dirActionsAsRegistryString,";");
+		strcat(tmp,dirActions[i].registryName);
+		strcat(tmp,";");
 		dirActionsAsRegistryString = tmp;
 	}
 	
@@ -220,6 +205,7 @@ void copyToClipBoard(const char* content)
     SetClipboardData(CF_TEXT, hMem);
     CloseClipboard();
 }
+
 
 void pasteClipboardToFile(const char* filepath) {
 	HANDLE h;
