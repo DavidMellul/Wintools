@@ -4,7 +4,7 @@ Wintools allows to enhance Windows contextual menu (right-click) with some cool 
 
 <img src="examples/showcase.gif" />
 
-## How to install
+## Install
 
 I built a ready-to-use executable that should work on Windows 2000 and above, which you'll find here in **/build**
 
@@ -12,7 +12,7 @@ Run as administrator, do not move the file from where you launched it, and you'r
 
 If you want to build it on your own, give a look to the Miscellaneous section.
 
-## What does it look like 
+## Screenshots
 
 <img src="examples/example_1.png" /><br />
 <img src="examples/example_2.png" />
