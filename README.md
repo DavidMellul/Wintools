@@ -27,6 +27,7 @@ If you want to build it on your own, give a look to the Miscellaneous section.
 - **Right click on a directory**:
 	- You can copy to your clipboard the absolute path of this directory.
 	- You can open a shell with this directory as current working directory.
+	- You can git pull within a git directory.
 
 ## Usage
 
